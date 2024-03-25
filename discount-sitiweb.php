@@ -12,7 +12,7 @@ if( ! class_exists( 'SitiWeb_Updater' ) ){
 
 $updater = new SitiWeb_Updater( __FILE__ );
 $updater->set_username( 'SitiWeb' );
-$updater->set_repository( 'Discount-SitiWeb' );
+$updater->set_repository( 'discount-sitiweb' );
 $updater->initialize();
 
 register_activation_hook(__FILE__, 'wcsd_activate');
