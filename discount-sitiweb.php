@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WooCommerce Scheduled Discounts
  * Description: Automatically sets scheduled discounts for products in selected categories.
- * Version: 1.1
+ * Version: 1.2
  * Author: Roberto
  * Author URI: https://sitiweb.nl/
  */
