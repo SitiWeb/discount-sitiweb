@@ -304,8 +304,14 @@ function wcsd_discount_details_callback($post)
         // Brands
         $include_brands = get_post_meta($post->ID, '_wcsd_include_brands', true);
         $exclude_brands = get_post_meta($post->ID, '_wcsd_exclude_brands', true);
-        $all_brands = get_terms(['taxonomy' => 'merk', 'hide_empty' => false]);
 
+        if (taxonomy_exists('merk')) {
+            $all_brands = get_terms(['taxonomy' => 'merk', 'hide_empty' => false]);
+        }
+        else{
+            $all_brands = false;
+        }
+   
         // Products
 
        // $all_products = get_posts(['post_type' => 'product', 'numberposts' => -1]);
@@ -340,7 +346,9 @@ function wcsd_discount_details_callback($post)
             echo '<option value="' . esc_attr($tag->term_id) . '"' . (in_array($tag->term_id, (array)$exclude_tags) ? ' selected' : '') . '>' . esc_html($tag->name) . '</option>';
         }
         echo '</select></td></tr>';
+        if ($all_brands){
 
+        
         // Output the brand select fields
         echo '<tr><td><label for="wcsd_include_brands">' . __('Include Brands:', 'woocommerce-scheduled-discounts') . '</label></td>';
         echo '<td><select style="width:100%;" id="wcsd_include_brands" name="wcsd_include_brands[]"  class="wcsd-select2" multiple>';
@@ -355,6 +363,7 @@ function wcsd_discount_details_callback($post)
             echo '<option value="' . esc_attr($brand->term_id) . '"' . (in_array($brand->term_id, (array)$exclude_brands) ? ' selected' : '') . '>' . esc_html($brand->name) . '</option>';
         }
         echo '</select></td></tr>';
+        }
 	
 		// Fetch selected product IDs from post meta
 	
@@ -578,8 +587,9 @@ function display_general_settings_meta_box($post)
 }
 
 
-add_action('before_delete_post', 'prevent_post_trashing');
-function prevent_post_trashing($post_id) {
+add_action('before_delete_post', 'prevent_post_deleting');
+function prevent_post_deleting($post_id) {
+
     // Check if the post is of a specific type or has a specific ID
     $post = get_post($post_id);
     if ($post->post_type == 'wcsd_discount_rule' || $post_id == 'specific_post_id') {
@@ -587,7 +597,7 @@ function prevent_post_trashing($post_id) {
         // if (!current_user_can('manage_options')) {
         
         // Perform a check to see if the post is being trashed
-        if ('trash' == get_post_status($post_id) &&  'finished' != get_post_meta($post_id,'_discount_status',true)) {
+        if ('trash' == get_post_status($post_id) &&  !in_array( get_post_meta($post_id,'_discount_status',true), ['finished', 'waiting'])) {
             // Redirect or display a message instead of trashing
             // For example, redirect back to the post list with a query var to trigger a notice
             wp_redirect(admin_url('edit.php?post_type=wcsd_discount_rule&cannot_trash=true'));
@@ -595,12 +605,36 @@ function prevent_post_trashing($post_id) {
         }
     }
 }
+add_filter('wp_insert_post_data', 'prevent_post_trashing', 10, 2);
+function prevent_post_trashing($data, $postarr) {
+    $post_id = $postarr['ID'];
+
+    // Check if the post is of a specific type or has a specific ID
+    if ($data['post_type'] == 'wcsd_discount_rule' || $post_id == 'specific_post_id') {
+        // Optionally, you can check for user capabilities if needed
+        // if (!current_user_can('manage_options')) {
+        
+        // Perform a check to see if the post status is being changed to 'trash'
+        if ('trash' == $data['post_status'] && 'finished' != get_post_meta($post_id, '_discount_status', true)) {
+            // Prevent trashing by setting the post status back to its previous status or to 'draft' if not set
+            $previous_status = !empty($postarr['post_status']) ? $postarr['post_status'] : 'draft';
+            $data['post_status'] = $previous_status;
+            wp_redirect(admin_url('edit.php?post_type=wcsd_discount_rule&cannot_trash=true'));
+            exit;
+            // Optionally, redirect or display a message
+            // Note: Redirects or admin notices may not work as expected in this context without additional handling
+        }
+    }
+
+    return $data;
+}
+
 
 // Optionally, add an admin notice if redirected with the cannot_trash query var
 add_action('admin_notices', 'show_cannot_trash_notice');
 function show_cannot_trash_notice() {
     if (isset($_GET['cannot_trash']) && $_GET['cannot_trash'] == 'true') {
-        echo '<div class="notice notice-error"><p>' . __('Sorry, this post cannot be trashed before the status is finished.', 'your-text-domain') . '</p></div>';
+        echo '<div class="notice notice-error"><p>' . __('Sorry, this post cannot be trashed before the status is waiting or finished.', 'your-text-domain') . '</p></div>';
     }
 }
 
