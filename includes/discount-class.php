@@ -32,9 +32,9 @@ class SitiWebDiscount{
 
     public function get_debug(){
         if (isset($this->debug)){
-			if ($this->debug){
-				$this->set_status();
-			}
+		if ($this->debug){
+			$this->set_status(1);
+		}
             return $this->debug;
         }
         return false;
